@@ -37,6 +37,7 @@
         });
 
         var objects = [];
+        var indexColor = 0;
 
         var colors = [0xff0000, 0x00ff00, 0x0000ff];
         var baseBoneRotation = (new THREE.Quaternion).setFromEuler(
@@ -68,10 +69,10 @@
                     //console.log("Interaction box height : " + this.lastFrame.interactionBox	);
                     IB = this.lastFrame.interactionBox;
                     //translationPoint[0] = IB.width;
-                    speedPoint[0] = (renderer.domElement.clientWidth/IB.width);
-                    speedPoint[1] = (renderer.domElement.clientHeight/IB.height);
-                    translationPoint[1] = -1*IB.height;
-                    //translationPoint[2] = IB.height;
+                    speedPoint[0] = (1/renderer.domElement.clientWidth) * 2 - 1;
+                    speedPoint[1] = -(1/renderer.domElement.clientHeight) * 2 + 1;
+                    //translationPoint[1] = -1*IB.height;
+                    //translationPoint[0] = -1*IB.width/2;
 
 
                     hand.fingers.forEach(function(finger) {
@@ -102,7 +103,9 @@
                             }
 
                             if(finger.type == 1 && bone.type == 3)
-                                console.log("finger center : " + bone.nextJoint);
+                            {
+                             //   console.log("finger center : " + bone.nextJoint);
+                            }
 
 
                             if (finger.type != 0 && bone.type == 3 && bone.direction()[1] < 0.0) {
@@ -110,10 +113,9 @@
                             }
                             if (finger.type == 1 && bone.type == 3 && bone.direction()[1] > 0.0) {
                                 indexPointing = true;                                
-                                //indexPointingX = IB.normalizePoint(translatePoint(bone.nextJoint, translationPoint, speedPoint))[0];
-                                //indexPointingY = IB.normalizePoint(translatePoint(bone.nextJoint, translationPoint, speedPoint))[1];
-                                indexPointingX = IB.normalizePoint(bone.nextJoint)[0];
-                                indexPointingY = IB.normalizePoint(bone.nextJoint)[1];
+                                indexPointingX = IB.normalizePoint(translatePoint(bone.nextJoint, translationPoint, speedPoint));
+                                indexPointingY = IB.normalizePoint(translatePoint(bone.nextJoint, translationPoint, speedPoint));
+                                
                             }
                         });
                     });
@@ -127,44 +129,78 @@
                         //console.log("[Gesture] Hand : " + hand.id + " index pointing.");
                         index_x = indexPointingX;
                         index_y = indexPointingY;
-                        //console.log("index pointing at x: " + index_x +", y: " + index_y);
-                        mouse.x = index_x;
-                        mouse.y = index_y;
+                        
 
+                        console.log("finger : " + index_x + " , "  + index_y);
+                        //raycaster.setFromCamera(mouse, camera);
 
-                        raycaster.setFromCamera(mouse, camera);
 
                         var intersects = raycaster.intersectObjects(objects);
 
-                        if (intersects.length > 0 ) {
-                        	
-                            var intersect = intersects[0];            
-                            if (hand.type == "left") {
+                        if (intersects.length > 0 && intersects[0].point.z < 30) {
 
-                                if (intersect.object != plane) {
+                            var intersect = intersects[0];
 
-                                    scene.remove(intersect.object);
+                            if(intersects[0].object == objects[0])
+                            {
 
-                                    objects.splice(objects.indexOf(intersect.object), 1);
+                                var intersect = intersects[0];            
+                                if (hand.type == "left") {
+
+                                    if (intersect.object != plane) {
+
+                                        scene.remove(intersect.object);
+
+                                        objects.splice(objects.indexOf(intersect.object), 1);
+
+                                    }
+
+                                } else if(hand.type == "right" && intersects[0].point.z == 0) {                                
+                                    var voxel = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                                    intersectPoint = [hand.fingers[1].bones[3].nextJoint[0], hand.fingers[1].bones[3].nextJoint[1], hand.fingers[1].bones[3].nextJoint[2]];
+
+                                    //console.log(intersectPoint);
+                                    voxel.position.fromArray(intersectPoint);
+                                    voxel.position.divideScalar(30).floor().multiplyScalar(30).addScalar(15);
+                                    voxel.position.z = 0;
+                                    scene.add(voxel);
+
+                                    objects.push(voxel);
 
                                 }
 
-                            } else if(hand.type == "right" && intersects[0].point.z == 0) {                                
-                                var voxel = new THREE.Mesh(cubeGeometry, cubeMaterial);
-                                intersectPoint = [hand.fingers[1].bones[3].nextJoint[0], hand.fingers[1].bones[3].nextJoint[1], hand.fingers[1].bones[3].nextJoint[2]];
-                                
-                                console.log(intersectPoint);
-                                voxel.position.fromArray(intersectPoint);
-                                voxel.position.divideScalar(30).floor().multiplyScalar(30).addScalar(5);
-                                scene.add(voxel);
-
-                                objects.push(voxel);
+                                render();
 
                             }
-
-                            render();
-
+                            else
+                            {                
+                                if(intersect.object == objects[1])
+                                {
+                                    indexColor = 1;
+                                    cubeMaterial = new THREE.MeshLambertMaterial({
+                                        color: colors[indexColor],
+                                    });
+                                }
+                                if(intersect.object == objects[2])
+                                {
+                                    indexColor = 0;
+                                    cubeMaterial = new THREE.MeshLambertMaterial({
+                                        color: colors[indexColor],
+                                    });
+                                }
+                                if(intersect.object == objects[3])
+                                {
+                                    indexColor = 2;   
+                                    cubeMaterial = new THREE.MeshLambertMaterial({
+                                        color: colors[indexColor],
+                                    });
+                                }
+                                console.log("color :" + indexColor);
+                            } 
                         }
+
+
+
                     }
                     
                     
@@ -222,7 +258,7 @@
                             new THREE.MeshPhongMaterial()
                             );
                         if(finger.type == 1 && i==4)
-                            jointMesh.material.color.setHex(0xff0000);
+                            jointMesh.material.color.setHex(colors[indexColor]);
                         else
                             jointMesh.material.color.setHex(0x0088ce);
                         scene.add(jointMesh);
@@ -284,9 +320,6 @@
 
             });
 
-
-
-
             init();
             render();
 
@@ -342,13 +375,29 @@
             }));
             scene.add(plane);
 
-            var squareGeometry = new THREE.Geometry(); 
-            squareGeometry.vertices.push(new THREE.Vector3(-50.0,  50.0, 0.0)); 
-            squareGeometry.vertices.push(new THREE.Vector3( 50.0,  50.0, 0.0)); 
-            squareGeometry.vertices.push(new THREE.Vector3( 50.0, -50.0, 0.0)); 
-            squareGeometry.vertices.push(new THREE.Vector3(-50.0, -50.0, 0.0)); 
-            squareGeometry.faces.push(new THREE.Face3(0, 1, 2)); 
-            squareGeometry.faces.push(new THREE.Face3(0, 2, 3)); 
+            var squareGeometryGreen = new THREE.Geometry(); 
+            squareGeometryGreen.vertices.push(new THREE.Vector3( 350.0,  50.0, 0.0)); 
+            squareGeometryGreen.vertices.push(new THREE.Vector3( 450.0,  50.0, 0.0)); 
+            squareGeometryGreen.vertices.push(new THREE.Vector3( 450.0, -50.0, 0.0)); 
+            squareGeometryGreen.vertices.push(new THREE.Vector3( 350.0, -50.0, 0.0)); 
+            squareGeometryGreen.faces.push(new THREE.Face3(0, 1, 2)); 
+            squareGeometryGreen.faces.push(new THREE.Face3(0, 2, 3)); 
+
+            var squareGeometryRed = new THREE.Geometry(); 
+            squareGeometryRed.vertices.push(new THREE.Vector3( 350.0, 150.0, 0.0)); 
+            squareGeometryRed.vertices.push(new THREE.Vector3( 450.0, 150.0, 0.0)); 
+            squareGeometryRed.vertices.push(new THREE.Vector3( 450.0, 50.0, 0.0)); 
+            squareGeometryRed.vertices.push(new THREE.Vector3( 350.0, 50.0, 0.0)); 
+            squareGeometryRed.faces.push(new THREE.Face3(0, 1, 2)); 
+            squareGeometryRed.faces.push(new THREE.Face3(0, 2, 3)); 
+
+            var squareGeometryBlue = new THREE.Geometry(); 
+            squareGeometryBlue.vertices.push(new THREE.Vector3( 350.0,  -50.0, 0.0)); 
+            squareGeometryBlue.vertices.push(new THREE.Vector3( 450.0,  -50.0, 0.0)); 
+            squareGeometryBlue.vertices.push(new THREE.Vector3( 450.0, -150.0, 0.0)); 
+            squareGeometryBlue.vertices.push(new THREE.Vector3( 350.0, -150.0, 0.0)); 
+            squareGeometryBlue.faces.push(new THREE.Face3(0, 1, 2)); 
+            squareGeometryBlue.faces.push(new THREE.Face3(0, 2, 3)); 
 
             var squareMaterialRed = new THREE.MeshBasicMaterial({ 
               color:0xff00000, 
@@ -363,12 +412,12 @@
               side:THREE.DoubleSide 
           }); 
 
-            var squareMeshRed = new THREE.Mesh(squareGeometry, squareMaterialRed); 
-            var squareMeshGreen = new THREE.Mesh(squareGeometry, squareMaterialGreen); 
-            var squareMeshBlue = new THREE.Mesh(squareGeometry, squareMaterialBlue);
-            squareMeshRed.position.set(400, 0.0, 0.0); 
-            squareMeshGreen.position.set(400, 100, 0.0); 
-            squareMeshBlue.position.set(400, -100.0, 0.0); 
+            var squareMeshRed = new THREE.Mesh(squareGeometryRed, squareMaterialRed); 
+            var squareMeshGreen = new THREE.Mesh(squareGeometryGreen, squareMaterialGreen); 
+            var squareMeshBlue = new THREE.Mesh(squareGeometryBlue, squareMaterialBlue);
+            //squareMeshRed.position.set(400, 0.0, 0.0); 
+            //squareMeshGreen.position.set(400, 100, 0.0); 
+            //squareMeshBlue.position.set(400, -100.0, 0.0); 
             scene.add(squareMeshRed); 
             scene.add(squareMeshGreen); 
             scene.add(squareMeshBlue); 
@@ -426,11 +475,11 @@
 
             mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1;
             mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+            console.log("mouse : " + mouse.x + " , "  + mouse.y);
 
 
             //console.log("event mouse click at x: " + event.clientX +", y: " + event.clientY);
             //console.log("mouse click at x: " + mouse.x +", y: " + mouse.y);
-
             raycaster.setFromCamera(mouse, camera);
 
             var intersects = raycaster.intersectObjects(objects);
@@ -438,7 +487,6 @@
             if (intersects.length > 0 && intersects[0].point.z < 30) {
 
                 var intersect = intersects[0];
-                console.log(intersect);
 
                 if (isShiftDown) {
 
@@ -454,7 +502,7 @@
 
                     var voxel = new THREE.Mesh(cubeGeometry, cubeMaterial);
                     voxel.position.copy(intersect.point).add(intersect.face.normal);
-                    voxel.position.divideScalar(30).floor().multiplyScalar(30).addScalar(15);
+                    voxel.position.divideScalar(30).floor().multiplyScalar(30).add(new THREE.Vector3(15,15, 0) );
                     scene.add(voxel);
 
                     objects.push(voxel);
