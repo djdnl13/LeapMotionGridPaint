@@ -18,7 +18,7 @@ if ((typeof(WebSocket) == 'undefined') &&
 // Create the socket with event handlers
 function init() {
     // Create and open the socket
-    ws = new WebSocket("ws://192.168.0.20:6437/v7.json");
+    ws = new WebSocket("ws://localhost:6437/v7.json");
 
     // On successful connection
     ws.onopen = function(event) {
