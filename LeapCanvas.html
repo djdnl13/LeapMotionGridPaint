@@ -44,9 +44,11 @@
 
         // Grid
         var size = 300,
-            step = 60;
-        var cubeGeometry = new THREE.BoxGeometry(step, step, 0);
-        var cubeGeometryErase = new THREE.BoxGeometry(step, step, 0);
+            step = 30;
+        var linewidth = 1;
+        var cubeSize = step - linewidth*3;
+        var cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, 0);
+        var cubeGeometryErase = new THREE.BoxGeometry(cubeSize, cubeSize, 0);
         var cubeMaterial = new THREE.MeshLambertMaterial(
         {
             color: 0xff0000,
@@ -56,8 +58,6 @@
         {
             color: 0x000000,
         });
-
-        var frameStopper = 0;
 
         function leapPointToWorld(leapPoint, iBox)
         {
@@ -83,14 +83,7 @@
             {
                 hand: function(hand)
                 {
-                    if (frameStopper != 0)
-                    {
-                        frameStopper++;
-                        return;
-                    }
-                    frameStopper = 0;
-
-                    var fingersUp = true;
+                    var anyFingerUp = false;
                     var indexPointing = false;
                     var indexPointingX = 0.0;
                     var indexPointingY = 0.0;
@@ -128,23 +121,25 @@
                                 mesh.position.fromArray(leapPointToWorld(bone.nextJoint, IB));
                             }
 
-                            if (finger.type != 0 && bone.type == 3 && bone.direction()[1] < 0.0)
+                            if (!anyFingerUp && finger.type != 0 && finger.type != 1 && bone.type == 3 && bone.direction()[1] > 0.0)
                             {
-                                fingersUp = false;
+                                anyFingerUp = true;
                             }
                             if (finger.type == 1 && bone.type == 3 && bone.direction()[1] > 0.0)
                             {
                                 indexPointing = true;
-
+                                if(hand.type == "right")
+                                    mesh.material.color.setHex(colors[indexColor]);
+                                else
+                                    mesh.material.color.setHex(0x0088ce);
                                 indexPointingX = leapPointToWorld(bone.nextJoint, IB)[0];
                                 indexPointingY = leapPointToWorld(bone.nextJoint, IB)[1];
-
                             }
                         });
                     });
 
 
-                    if (!fingersUp && indexPointing)
+                    if (!anyFingerUp && indexPointing)
                     {
 
                         //console.log("finger : " + indexPointingX + " , "  + indexPointingY);
@@ -159,8 +154,8 @@
                                 //console.log("finger : " + indexPointingX + " , "  + indexPointingY);
 
                                 var voxel = new THREE.Mesh(cubeGeometryErase, cubeMaterialErase);
-                                voxel.position.x = indexPointingX;
-                                voxel.position.y = indexPointingY;
+                                voxel.position.x = indexPointingX+linewidth/2-0.3;
+                                voxel.position.y = indexPointingY+linewidth/2-0.3;
                                 voxel.position.z = 0;
 
                                 scene.add(voxel);
@@ -173,8 +168,8 @@
                                 //console.log("finger : " + indexPointingX + " , "  + indexPointingY);
 
                                 var voxel = new THREE.Mesh(cubeGeometry, cubeMaterial);
-                                voxel.position.x = indexPointingX;
-                                voxel.position.y = indexPointingY;
+                                voxel.position.x = indexPointingX+linewidth/2-0.3;
+                                voxel.position.y = indexPointingY+linewidth/2-0.3;
                                 voxel.position.z = 0;
 
                                 scene.add(voxel);
@@ -230,7 +225,7 @@
 
                         // CylinderGeometry(radiusTop, radiusBottom, height, radiusSegments, heightSegments, openEnded)
                         var boneMesh = new THREE.Mesh(
-                            new THREE.CylinderGeometry(4, 4, bone.length),
+                            new THREE.CylinderGeometry(4, 4, bone.length*2),
                             new THREE.MeshPhongMaterial()
                         );
 
@@ -334,6 +329,7 @@
 
             var material = new THREE.LineBasicMaterial(
             {
+                linewidth: linewidth,
                 color: 0xf0f0f0,
                 opacity: 0.2
             });
