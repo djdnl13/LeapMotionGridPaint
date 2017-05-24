@@ -25,6 +25,13 @@
     <script src="lib/renderers/CanvasRenderer.js"></script>
 
     <script>
+
+        lh = [];
+        rh = [];
+        iBox = [0,0,0];
+        handsCreated = false;
+
+
         var container;
         var camera, scene, renderer;
         var plane;
@@ -37,14 +44,15 @@
         var colors = [0xff0000, 0x00ff00, 0x0000ff];
         var baseBoneRotation = (new THREE.Quaternion).setFromEuler(
             new THREE.Euler(Math.PI / 2, 0, 0)
-        );
+            );
 
         var translationPoint = [0, 0, 0];
         var speedPoint = [1, 1, 1];
 
         // Grid
-        var size = 300,
-            step = 15;
+        var gridWidth = 1200;
+        var gridHeight = 250;
+        step = 50;
         var linewidth = 1;
         var cubeSize = step - linewidth*3;
         var cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, 0);
@@ -59,22 +67,144 @@
             color: 0x000000,
         });
 
-        function leapPointToWorld(leapPoint, iBox)
+        function leapPointToWorld(leapPoint)
         {
-            x = leapPoint[0] / iBox.size[0];
-            y = leapPoint[1] / iBox.size[1];
-            z = leapPoint[2] / iBox.size[2];
+            x = leapPoint[0]*renderer.domElement.clientWidth;
+            y = leapPoint[1]*renderer.domElement.clientHeight - window.innerHeight / 2;
+            z = leapPoint[2];
 
-
-            x *= renderer.domElement.clientWidth;
-            y *= renderer.domElement.clientHeight;
-            //z *= 10;
-
-            y -= window.innerHeight / 2 + 300;
-
-            return Leap.vec3.fromValues(x, y, z);
+            return [x, y, z];
         }
 
+        var ws = new WebSocket("ws://localhost:3000/echo");        
+        var ti=0;
+
+        function requestData()
+        {
+            ws.send("");
+        }
+
+        ws.onopen = function(){
+            console.log("opened");
+            setInterval(requestData, 100);
+        };
+        
+        ws.onmessage = function(evt){
+            
+            if(evt.data == "")
+                return;
+
+            obj = JSON.parse(evt.data);
+            
+            if(obj == null)
+                return;
+            //console.log(obj);
+            if(!handsCreated)
+            {
+                createHands(obj);
+                iBox[0] = obj.ib.x;
+                iBox[1] = obj.ib.y;
+                iBox[2] = obj.ib.z;
+                handsCreated = true;
+            }
+
+            if(obj.left_hand.visible)
+            {
+                for(var i in obj.left_hand.bones)
+                {                    
+                    lh['boneMeshes'][i].position.fromArray(leapPointToWorld([obj.left_hand.bones[i].x, obj.left_hand.bones[i].y, obj.left_hand.bones[i].z]));
+                }
+
+                if(obj.left_hand.action)
+                {
+                    indexPointing = leapPointToWorld([obj.right_hand.bones[3].x, obj.right_hand.bones[3].y, obj.right_hand.bones[3].z]);
+                    if(indexPointing[0] >= -gridWidth && indexPointing[0] <= gridWidth && indexPointing[1] >= -gridHeight && indexPointing[1] <= gridHeight)
+                    {
+                        indexPointing = leapPointToWorld([obj.left_hand.bones[3].x, obj.left_hand.bones[3].y, obj.left_hand.bones[3].z]);
+                        indexPointing[0] = Math.floor(indexPointing[0] / step) * step + step / 2;
+                        indexPointing[1] = Math.floor(indexPointing[1] / step) * step + step / 2;
+                        //console.log("finger : " + indexPointingX + " , "  + indexPointingY);
+
+                        var voxel = new THREE.Mesh(cubeGeometryErase, cubeMaterialErase);
+                        voxel.position.x = indexPointing[0]+linewidth/2-0.3;
+                        voxel.position.y = indexPointing[1]+linewidth/2-0.3;
+                        voxel.position.z = 0;
+
+                        scene.add(voxel);
+                    }
+                }
+
+            }
+
+            if(obj.right_hand.visible)
+            {
+                if(obj.right_hand.bones[1].z < 150)
+                {
+                    camera.position.set(0, 0, 400+obj.right_hand.bones[1].z);
+                }
+                else
+                {
+                    camera.position.set(150);
+                }
+
+                for(var i in obj.right_hand.bones)
+                {                    
+                    rh['boneMeshes'][i].position.fromArray(leapPointToWorld([obj.right_hand.bones[i].x, obj.right_hand.bones[i].y, obj.right_hand.bones[i].z]));
+                }
+
+
+                if (obj.right_hand.action)
+                {
+                    indexPointing = leapPointToWorld([obj.right_hand.bones[3].x, obj.right_hand.bones[3].y, obj.right_hand.bones[3].z]);
+                    if(indexPointing[0] >= -gridWidth && indexPointing[0] <= gridWidth && indexPointing[1] >= -gridHeight && indexPointing[1] <= gridHeight)
+                    {
+                        indexPointing[0] = Math.floor(indexPointing[0] / step) * step + step / 2;
+                        indexPointing[1] = Math.floor(indexPointing[1] / step) * step + step / 2;
+                        //console.log("finger : " + indexPointingX + " , "  + indexPointingY);
+
+                        var voxel = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                        voxel.position.x = indexPointing[0]+linewidth/2-0.3;
+                        voxel.position.y = indexPointing[1]+linewidth/2-0.3;
+                        voxel.position.z = 0;
+
+                        scene.add(voxel);
+                    }
+                    else if (indexPointing[1] >= -400 && indexPointing[1] <= -300)
+                    {
+                        if (indexPointing[0] >= -150 && indexPointing[0] <= -50)
+                        {
+                            indexColor = 0;
+                        }
+                        else if (indexPointing[0] >= -50 && indexPointing[0] <= 50)
+                        {
+                            indexColor = 1;
+                        }
+                        else if (indexPointing[0] >= 50 && indexPointing[0] <= 150)
+                        {
+                            indexColor = 2;
+                        }
+
+                        cubeMaterial = new THREE.MeshLambertMaterial(
+                        {
+                            color: colors[indexColor],
+                        });
+                    }
+                }
+
+            }
+
+            if(obj.right_hand.visible || obj.left_hand.visible)
+            {
+                /*if(hand.arm.center()[2] < 150)
+                    camera.position.set(0, 0, 150+150);
+                else
+                    camera.position.set(0, 0, 150+hand.arm.center()[2]);
+*/
+            }
+            renderer.render(scene, camera);
+        };        
+        
+        /*
         var controller = Leap.loop(
             {
                 background: false,
@@ -222,7 +352,7 @@
                     var boneMeshes = [];
                     var jointMeshes = [];
 
-                    /*finger.bones.forEach(function(bone)
+                    finger.bones.forEach(function(bone)
                     {
                         // create joints
 
@@ -236,7 +366,7 @@
                         scene.add(boneMesh);
                         boneMeshes.push(boneMesh);
 
-                    });*/
+                    });
 
                     for (var i = 0; i < finger.bones.length + 1; i++)
                     {
@@ -298,47 +428,111 @@
             .on('connect', function() {
 
             });
+            */
+            init();
+            render();
 
-        init();
-        render();
-
-        function init()
+             function createHands(obj)
         {
 
-            container = document.createElement('div');
-            document.body.appendChild(container);
-
-            var info = document.createElement('div');
-
-
-            camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 1, 10000);
-            camera.position.set(0, 0, 400);
-            camera.lookAt(new THREE.Vector3());
-
-            scene = new THREE.Scene();
-
-            var geometry = new THREE.Geometry();
-
-            for (var i = -size; i <= size; i += step)
+            var boneMeshes = [];
+            var jointMeshes = [];
+            
+            for(var bone in obj.left_hand.bones)
             {
+                var boneMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(4, 4, bone.length),
+                    new THREE.MeshPhongMaterial()
+                    );
 
-                geometry.vertices.push(new THREE.Vector3(-size, i, 0));
-                geometry.vertices.push(new THREE.Vector3(size, i, 0));
+                boneMesh.material.color.setHex(0xffffff);
+                scene.add(boneMesh);
+                boneMeshes.push(boneMesh);
 
-                geometry.vertices.push(new THREE.Vector3(i, -size, 0));
-                geometry.vertices.push(new THREE.Vector3(i, size, 0));
+                var jointMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(8),
+                    new THREE.MeshPhongMaterial()
+                    );
 
+                jointMesh.material.color.setHex(colors[indexColor]);
+
+                scene.add(jointMesh);
+                jointMeshes.push(jointMesh);
             }
 
-            var material = new THREE.LineBasicMaterial(
-            {
-                linewidth: linewidth,
-                color: 0xf0f0f0,
-                opacity: 0.6
-            });
 
-            var line = new THREE.LineSegments(geometry, material);
-            scene.add(line);
+            lh['boneMeshes'] = boneMeshes;
+            lh['jointMeshes'] =jointMeshes
+
+            boneMeshes = [];
+            jointMeshes = [];
+
+            for(var bone in obj.right_hand.bones)
+            {
+                var boneMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(16, 16, 16),
+                    new THREE.MeshPhongMaterial()
+                    );
+
+                boneMesh.material.color.setHex(0xffffff);
+                scene.add(boneMesh);
+                boneMeshes.push(boneMesh);
+
+                var jointMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(8),
+                    new THREE.MeshPhongMaterial()
+                    );
+
+                jointMesh.material.color.setHex(colors[indexColor]);
+
+                scene.add(jointMesh);
+                jointMeshes.push(jointMesh);
+            }
+
+
+            rh['boneMeshes'] = boneMeshes;
+            rh['jointMeshes'] =jointMeshes;
+
+        }
+
+            function init()
+            {
+
+                container = document.createElement('div');
+                document.body.appendChild(container);
+
+                var info = document.createElement('div');
+
+
+                camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 1, 10000);
+                camera.position.set(0, 0, 400);
+                camera.lookAt(new THREE.Vector3());
+
+                scene = new THREE.Scene();
+
+                var geometry = new THREE.Geometry();
+
+                for (var i = -gridWidth; i <= gridWidth; i += step)
+                {
+                    for(var j = -gridHeight ; j<=gridHeight ; j += step)
+                    {
+                        geometry.vertices.push(new THREE.Vector3(-gridWidth, j, 0));
+                        geometry.vertices.push(new THREE.Vector3(gridWidth, j, 0));
+
+                        geometry.vertices.push(new THREE.Vector3(i, -gridHeight, 0));
+                        geometry.vertices.push(new THREE.Vector3(i, gridHeight, 0));
+                    }
+                }
+
+                var material = new THREE.LineBasicMaterial(
+                {
+                    linewidth: linewidth,
+                    color: 0xf0f0f0,
+                    opacity: 0.6
+                });
+
+                var line = new THREE.LineSegments(geometry, material);
+                scene.add(line);
 
             //            
 
@@ -351,29 +545,15 @@
             }));
             scene.add(plane);
 
-            var squareGeometryGreen = new THREE.Geometry();
-            squareGeometryGreen.vertices.push(new THREE.Vector3(350.0, 50.0, 0.0));
-            squareGeometryGreen.vertices.push(new THREE.Vector3(450.0, 50.0, 0.0));
-            squareGeometryGreen.vertices.push(new THREE.Vector3(450.0, -50.0, 0.0));
-            squareGeometryGreen.vertices.push(new THREE.Vector3(350.0, -50.0, 0.0));
-            squareGeometryGreen.faces.push(new THREE.Face3(0, 1, 2));
-            squareGeometryGreen.faces.push(new THREE.Face3(0, 2, 3));
 
-            var squareGeometryRed = new THREE.Geometry();
-            squareGeometryRed.vertices.push(new THREE.Vector3(350.0, 150.0, 0.0));
-            squareGeometryRed.vertices.push(new THREE.Vector3(450.0, 150.0, 0.0));
-            squareGeometryRed.vertices.push(new THREE.Vector3(450.0, 50.0, 0.0));
-            squareGeometryRed.vertices.push(new THREE.Vector3(350.0, 50.0, 0.0));
-            squareGeometryRed.faces.push(new THREE.Face3(0, 1, 2));
-            squareGeometryRed.faces.push(new THREE.Face3(0, 2, 3));
-
-            var squareGeometryBlue = new THREE.Geometry();
-            squareGeometryBlue.vertices.push(new THREE.Vector3(350.0, -50.0, 0.0));
-            squareGeometryBlue.vertices.push(new THREE.Vector3(450.0, -50.0, 0.0));
-            squareGeometryBlue.vertices.push(new THREE.Vector3(450.0, -150.0, 0.0));
-            squareGeometryBlue.vertices.push(new THREE.Vector3(350.0, -150.0, 0.0));
-            squareGeometryBlue.faces.push(new THREE.Face3(0, 1, 2));
-            squareGeometryBlue.faces.push(new THREE.Face3(0, 2, 3));
+            var squareGeometry = new THREE.Geometry();
+            squareGeometry.vertices.push(new THREE.Vector3(0.0, 0.0, 0.0));
+            squareGeometry.vertices.push(new THREE.Vector3(100.0, 0.0, 0.0));
+            squareGeometry.vertices.push(new THREE.Vector3(100.0, 100.0, 0.0));
+            squareGeometry.vertices.push(new THREE.Vector3(0.0, 100.0, 0.0));
+            squareGeometry.faces.push(new THREE.Face3(0, 1, 2));
+            squareGeometry.faces.push(new THREE.Face3(0, 2, 3));
+            
 
             var squareMaterialRed = new THREE.MeshBasicMaterial(
             {
@@ -391,12 +571,12 @@
                 side: THREE.DoubleSide
             });
 
-            var squareMeshRed = new THREE.Mesh(squareGeometryRed, squareMaterialRed);
-            var squareMeshGreen = new THREE.Mesh(squareGeometryGreen, squareMaterialGreen);
-            var squareMeshBlue = new THREE.Mesh(squareGeometryBlue, squareMaterialBlue);
-            //squareMeshRed.position.set(400, 0.0, 0.0); 
-            //squareMeshGreen.position.set(400, 100, 0.0); 
-            //squareMeshBlue.position.set(400, -100.0, 0.0); 
+            var squareMeshRed = new THREE.Mesh(squareGeometry, squareMaterialRed);
+            var squareMeshGreen = new THREE.Mesh(squareGeometry, squareMaterialGreen);
+            var squareMeshBlue = new THREE.Mesh(squareGeometry, squareMaterialBlue);
+            squareMeshRed.position.set(-150, -400.0, -400.0); 
+            squareMeshGreen.position.set(-50, -400.0, -400.0);
+            squareMeshBlue.position.set(50, -400.0, -400.0); 
             scene.add(squareMeshRed);
             scene.add(squareMeshGreen);
             scene.add(squareMeshBlue);
@@ -440,9 +620,7 @@
 
         function render()
         {
-
             renderer.render(scene, camera);
-
         }
     </script>
 
