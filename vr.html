@@ -75,22 +75,28 @@
         }
 
         function createHands(obj)
-        {
-        	var boneMeshes = [];
-        	var jointMeshes = [];
-
-        	for(var bone in obj.left_hand.bones)
+        {        
+        	for(var finger in [0,1,2,3,4])
         	{
-        		var boneMesh = new THREE.Mesh(
-        			new THREE.CylinderGeometry(16, 16, 16),
-        			new THREE.MeshPhongMaterial()
-        			);
+                lh[finger] = [];
+                var boneMeshes = [];
+                //var jointMeshes = [];
 
-        		boneMesh.material.color.setHex(colors[2]);
-        		scene.add(boneMesh);
-        		boneMeshes.push(boneMesh);
+                for(var bone in [0,1,2,3])
+                {
+                    var boneMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(16, 16, 16),
+                    new THREE.MeshPhongMaterial()
+                    );
 
-        		var jointMesh = new THREE.Mesh(
+                    boneMesh.material.color.setHex(colors[2]);
+                    scene.add(boneMesh);
+                    boneMeshes.push(boneMesh);                    
+                }
+                
+                lh[finger]['boneMeshes'] = boneMeshes;
+                //lh[finger]['jointMeshes'] = jointMeshes;        
+        		/*var jointMesh = new THREE.Mesh(
         			new THREE.SphereGeometry(8),
         			new THREE.MeshPhongMaterial()
         			);
@@ -98,16 +104,44 @@
         		jointMesh.material.color.setHex(colors[indexColor]);
 
         		scene.add(jointMesh);
-        		jointMeshes.push(jointMesh);
-        	}
+        		jointMeshes.push(jointMesh);*/
+        	} 
+            for(var finger in [0,1,2,3,4])
+            {
+                rh[finger] = [];
+                var boneMeshes = [];
+                //var jointMeshes = [];
 
-        	lh['boneMeshes'] = boneMeshes;
-        	lh['jointMeshes'] = jointMeshes;
+                for(var bone in [0,1,2,3])
+                {
+                    var boneMesh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(16, 16, 16),
+                    new THREE.MeshPhongMaterial()
+                    );
 
-        	boneMeshes = [];
+                    boneMesh.material.color.setHex(colors[2]);
+                    scene.add(boneMesh);
+                    boneMeshes.push(boneMesh);                    
+                }
+                
+                rh[finger]['boneMeshes'] = boneMeshes;
+                //lh[finger]['jointMeshes'] = jointMeshes;        
+                /*var jointMesh = new THREE.Mesh(
+                    new THREE.SphereGeometry(8),
+                    new THREE.MeshPhongMaterial()
+                    );
+
+                jointMesh.material.color.setHex(colors[indexColor]);
+
+                scene.add(jointMesh);
+                jointMeshes.push(jointMesh);*/
+            }           
+     	
+
+        	/*boneMeshes = [];
         	jointMeshes = [];
 
-        	for(var bone in obj.right_hand.bones)
+        	for(var bone in obj.right_hand.fingers)
         	{
         		var boneMesh = new THREE.Mesh(
         			new THREE.CylinderGeometry(16, 16, 16),
@@ -131,12 +165,12 @@
 
 
         	rh['boneMeshes'] = boneMeshes;
-        	rh['jointMeshes'] = jointMeshes;
+        	rh['jointMeshes'] = jointMeshes;*/
 
         }
 
 
-        var ws = new WebSocket("ws://192.168.43.137:3000/echo");       
+        var ws = new WebSocket("ws://localhost:3000/echo");       
 
         function requestData()
         {
@@ -145,7 +179,7 @@
 
         ws.onopen = function(){
         	console.log("opened");
-        	setInterval(requestData, 50);
+        	setInterval(requestData, 300);
         };
 
         ws.onmessage = function(evt){
@@ -158,7 +192,7 @@
         	if(obj == null)
         		return;
 
-            if(!handsCreated)
+            if(!handsCreated && (obj.left_hand || obj.right_hand))
             {
             	createHands(obj);
             	iBox[0] = obj.ib.x;
@@ -167,13 +201,17 @@
             	handsCreated = true;
             }
 
-            if(obj.left_hand.visible)
+            if(obj.left_hand)
             {
-            	for(var i in obj.left_hand.bones)
+            	for(var finger in obj.left_hand.fingers)
             	{
-            		lh['boneMeshes'][i].position.fromArray(leapPointToWorld([obj.left_hand.bones[i].x, obj.left_hand.bones[i].y, obj.left_hand.bones[i].z]));
+                    for(var bone in obj.left_hand.fingers[finger])
+                    {
+            		  lh[finger]['boneMeshes'][bone].position.fromArray(leapPointToWorld([obj.left_hand.fingers[finger][bone][0], obj.left_hand.fingers[finger][bone][1], obj.left_hand.fingers[finger][bone][2]]));
+                    }
             	}
-            	
+
+            	/*
             	if(obj.left_hand.action)
             	{
             		indexPointing = leapPointToWorld([obj.right_hand.bones[3].x, obj.right_hand.bones[3].y, obj.right_hand.bones[3].z]);
@@ -192,24 +230,18 @@
                         scene.add(voxel);
                     }
                 }
-				
+				*/
             }
 
-            if(obj.right_hand.visible)
+            if(obj.right_hand)
             {
-            	/*if(obj.right_hand.bones[1].z < 150)
-            	{
-            		camera.position.set(0, 0, 400+obj.right_hand.bones[1].z);
-            	}
-            	else
-            	{
-            		camera.position.set(150);
-            	}*/
-            	for(var i in obj.right_hand.bones)
-            	{                    
-            		console.log("drawing rhand at : " + leapPointToWorld([obj.right_hand.bones[i].x, obj.right_hand.bones[i].y, obj.right_hand.bones[i].z]));
-            		rh['boneMeshes'][i].position.fromArray(leapPointToWorld([obj.right_hand.bones[i].x, obj.right_hand.bones[i].y, obj.right_hand.bones[i].z]));
-            	}
+            	for(var finger in obj.right_hand.fingers)
+                {
+                    for(var bone in obj.right_hand.fingers[finger])
+                    {
+                      rh[finger]['boneMeshes'][bone].position.fromArray(leapPointToWorld([obj.right_hand.fingers[finger][bone][0], obj.right_hand.fingers[finger][bone][1], obj.right_hand.fingers[finger][bone][2]]));
+                    }
+                }
 
 /*
             	if (obj.right_hand.action)
@@ -251,14 +283,7 @@
                 }
 				*/
             }
-
-            if(obj.right_hand.visible || obj.left_hand.visible)
-            {
-                //if(hand.arm.center()[2] < 150)
-                    //camera.position.set(0, 0, 150+150);
-                //else
-                //    camera.position.set(0, 0, 150+hand.arm.center()[2]);
-            }
+            
             render();
         };
 
