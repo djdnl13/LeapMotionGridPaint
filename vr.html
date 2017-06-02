@@ -69,7 +69,8 @@
 		{
 			x = leapPoint[0]*renderer.domElement.clientWidth;
 			y = leapPoint[1]*renderer.domElement.clientHeight - window.innerHeight / 2;
-            z = leapPoint[2]-300;
+            z = (leapPoint[2]-5)*50;
+            //console.log(z);
 
             return [x, y, z];
         }
@@ -80,63 +81,67 @@
         	{
                 lh[finger] = [];
                 var boneMeshes = [];
-                //var jointMeshes = [];
+                var jointMeshes = [];
 
                 for(var bone in [0,1,2,3])
                 {
                     var boneMesh = new THREE.Mesh(
-                    new THREE.CylinderGeometry(16, 16, 16),
-                    new THREE.MeshPhongMaterial()
-                    );
+                        new THREE.CylinderGeometry(16, 16, 50),
+                        new THREE.MeshPhongMaterial()
+                        );
 
                     boneMesh.material.color.setHex(colors[2]);
-                    scene.add(boneMesh);
-                    boneMeshes.push(boneMesh);                    
+                    pivot.add(boneMesh);
+                    boneMeshes.push(boneMesh);
+
+            		var jointMesh = new THREE.Mesh(
+            			new THREE.SphereGeometry(8),
+            			new THREE.MeshPhongMaterial()
+            			);
+
+            		jointMesh.material.color.setHex(colors[indexColor]);
+
+            		pivot.add(jointMesh);
+            		jointMeshes.push(jointMesh);
                 }
                 
                 lh[finger]['boneMeshes'] = boneMeshes;
-                //lh[finger]['jointMeshes'] = jointMeshes;        
-        		/*var jointMesh = new THREE.Mesh(
-        			new THREE.SphereGeometry(8),
-        			new THREE.MeshPhongMaterial()
-        			);
-
-        		jointMesh.material.color.setHex(colors[indexColor]);
-
-        		scene.add(jointMesh);
-        		jointMeshes.push(jointMesh);*/
+                lh[finger]['jointMeshes'] = jointMeshes;
         	} 
             for(var finger in [0,1,2,3,4])
             {
                 rh[finger] = [];
                 var boneMeshes = [];
-                //var jointMeshes = [];
+                var jointMeshes = [];
 
                 for(var bone in [0,1,2,3])
                 {
                     var boneMesh = new THREE.Mesh(
-                    new THREE.CylinderGeometry(16, 16, 16),
-                    new THREE.MeshPhongMaterial()
-                    );
+                        new THREE.CylinderGeometry(16, 16, 50),
+                        new THREE.MeshPhongMaterial()
+                        );
 
                     boneMesh.material.color.setHex(colors[2]);
-                    scene.add(boneMesh);
-                    boneMeshes.push(boneMesh);                    
-                }
-                
-                rh[finger]['boneMeshes'] = boneMeshes;
-                //lh[finger]['jointMeshes'] = jointMeshes;        
-                /*var jointMesh = new THREE.Mesh(
-                    new THREE.SphereGeometry(8),
-                    new THREE.MeshPhongMaterial()
+                    pivot.add(boneMesh);
+                    boneMeshes.push(boneMesh);
+
+                    var jointMesh = new THREE.Mesh(
+                        new THREE.SphereGeometry(8),
+                        new THREE.MeshPhongMaterial()
                     );
 
-                jointMesh.material.color.setHex(colors[indexColor]);
+                    jointMesh.material.color.setHex(colors[indexColor]);
 
-                scene.add(jointMesh);
-                jointMeshes.push(jointMesh);*/
+                    pivot.add(jointMesh);
+                    jointMeshes.push(jointMesh);
+                }
+
+                rh[finger]['boneMeshes'] = boneMeshes;
+                rh[finger]['jointMeshes'] = jointMeshes;
+
+
             }           
-     	
+
 
         	/*boneMeshes = [];
         	jointMeshes = [];
@@ -179,7 +184,7 @@
 
         ws.onopen = function(){
         	console.log("opened");
-        	setInterval(requestData, 300);
+        	setInterval(requestData, 100);
         };
 
         ws.onmessage = function(evt){
@@ -207,9 +212,9 @@
             	{
                     for(var bone in obj.left_hand.fingers[finger])
                     {
-            		  lh[finger]['boneMeshes'][bone].position.fromArray(leapPointToWorld([obj.left_hand.fingers[finger][bone][0], obj.left_hand.fingers[finger][bone][1], obj.left_hand.fingers[finger][bone][2]]));
-                    }
-            	}
+                        lh[finger]['jointMeshes'][bone].position.fromArray(leapPointToWorld([obj.left_hand.fingers[finger][bone][0], obj.left_hand.fingers[finger][bone][1], obj.left_hand.fingers[finger][bone][2]]));
+                    }                    
+                }
 
             	/*
             	if(obj.left_hand.action)
@@ -230,7 +235,7 @@
                         scene.add(voxel);
                     }
                 }
-				*/
+                */
             }
 
             if(obj.right_hand)
@@ -239,15 +244,20 @@
                 {
                     for(var bone in obj.right_hand.fingers[finger])
                     {
-                      rh[finger]['boneMeshes'][bone].position.fromArray(leapPointToWorld([obj.right_hand.fingers[finger][bone][0], obj.right_hand.fingers[finger][bone][1], obj.right_hand.fingers[finger][bone][2]]));
-                    }
-                }
+                      rh[finger]['jointMeshes'][bone].position.fromArray(leapPointToWorld([obj.right_hand.fingers[finger][bone][0], obj.right_hand.fingers[finger][bone][1], obj.right_hand.fingers[finger][bone][2]]));
+                      //if(finger == 1)
+                        //console.log(rh[finger]['boneMeshes'][bone].matrixWorld);
+                      //rh[finger]['boneMeshes'][bone].lookAt(camera.position);
+                  }
+                  //console.log("");
+              }
 
-/*
+
             	if (obj.right_hand.action)
             	{
             		indexPointing = leapPointToWorld([obj.right_hand.bones[3].x, obj.right_hand.bones[3].y, obj.right_hand.bones[3].z]);
-            		if(indexPointing[0] >= -gridWidth && indexPointing[0] <= gridWidth && indexPointing[1] >= -gridHeight && indexPointing[1] <= gridHeight)
+                    console.log(indexPointing);
+            		/*if(indexPointing[0] >= -gridWidth && indexPointing[0] <= gridWidth && indexPointing[1] >= -gridHeight && indexPointing[1] <= gridHeight)
             		{
             			indexPointing[0] = Math.floor(indexPointing[0] / step) * step + step / 2;
             			indexPointing[1] = Math.floor(indexPointing[1] / step) * step + step / 2;
@@ -260,7 +270,7 @@
 
                         scene.add(voxel);
                     }
-                    else if (indexPointing[1] >= -400 && indexPointing[1] <= -300)
+                    else if (indexPointing[1] >= -450 && indexPointing[1] <= -300)
                     {
                     	if (indexPointing[0] >= -150 && indexPointing[0] <= -50)
                     	{
@@ -281,7 +291,7 @@
                     	});
                     }
                 }
-				*/
+                
             }
             
             render();
@@ -306,7 +316,7 @@
 
         	scene = new THREE.Scene();
 
-        	camera = new THREE.PerspectiveCamera( 100, window.innerWidth / window.innerHeight, 1, 1000 );
+        	camera = new THREE.PerspectiveCamera( 90, window.innerWidth / window.innerHeight, 1, 1000 );
         	scene.add( camera );				
 
         	room = new THREE.Mesh(
@@ -322,13 +332,13 @@
         		aHeading = a * 3.14159 / 180;
         		bHeading = b * 3.14159 / 180;
 
-        		geometry.vertices.push(new THREE.Vector3(400*Math.cos(aHeading), -gridHeight, Math.sin(aHeading) * 400));
-        		geometry.vertices.push(new THREE.Vector3(400*Math.cos(aHeading), gridHeight, Math.sin(aHeading) * 400));
+        		geometry.vertices.push(new THREE.Vector3(450*Math.cos(aHeading), -gridHeight, Math.sin(aHeading) * 450));
+        		geometry.vertices.push(new THREE.Vector3(450*Math.cos(aHeading), gridHeight, Math.sin(aHeading) * 450));
 
         		for(var j = -gridHeight ; j<=gridHeight ; j += heightStep)
         		{
-        			geometry.vertices.push(new THREE.Vector3(400*Math.cos(aHeading), -j, Math.sin(aHeading) * 400));
-        			geometry.vertices.push(new THREE.Vector3(400*Math.cos(bHeading), -j, Math.sin(bHeading) * 400));
+        			geometry.vertices.push(new THREE.Vector3(450*Math.cos(aHeading), -j, Math.sin(aHeading) * 450));
+        			geometry.vertices.push(new THREE.Vector3(450*Math.cos(bHeading), -j, Math.sin(bHeading) * 450));
         		}
 
         	}
@@ -372,12 +382,28 @@
         	var squareMeshRed = new THREE.Mesh(squareGeometry, squareMaterialRed);
         	var squareMeshGreen = new THREE.Mesh(squareGeometry, squareMaterialGreen);
         	var squareMeshBlue = new THREE.Mesh(squareGeometry, squareMaterialBlue);
-            squareMeshRed.position.set(-150, -400.0, -400.0); 
-            squareMeshGreen.position.set(-50, -400.0, -400.0);
-            squareMeshBlue.position.set(50, -400.0, -400.0); 
-            scene.add(squareMeshRed);
-            scene.add(squareMeshGreen);
-            scene.add(squareMeshBlue);
+            squareMeshRed.position.set(-150, -450.0, -450.0); 
+            squareMeshGreen.position.set(-50, -450.0, -450.0);
+            squareMeshBlue.position.set(50, -450.0, -450.0); 
+            pivot = new THREE.Object3D();
+            scene.add(pivot);
+
+            pivot.add(squareMeshRed);
+            pivot.add(squareMeshGreen);
+            pivot.add(squareMeshBlue);
+
+            /*
+            test
+            */
+
+            ball = new THREE.Mesh(
+              new THREE.SphereGeometry(0.3),
+              new THREE.MeshNormalMaterial()
+              );
+            ball.position.set(0, 0, -2);
+
+            pivot.add(ball);
+
 
             var ambientLight = new THREE.AmbientLight(0x606060);
             scene.add(ambientLight);
@@ -391,7 +417,7 @@
             renderer.setPixelRatio( window.devicePixelRatio );
             renderer.setSize( window.innerWidth, window.innerHeight );
             renderer.sortObjects = false;
-            container.appendChild( renderer.domElement );
+            container.appendChild( renderer.domElement );            
 
             controls = new THREE.VRControls( camera );
             effect = new THREE.VREffect( renderer );
@@ -425,19 +451,40 @@
 
 
         function animate() {
-        	effect.requestAnimationFrame( animate );
-        	render();
+            render();
+            effect.requestAnimationFrame( animate );
         }
 
         function render() {
 
-        	var delta = clock.getDelta() * 60;			
+            var delta = clock.getDelta() * 60;          
+            controls.update();
 
-        	controls.update();
-        	effect.render( scene, camera );
+            yaxis = new THREE.Vector3(0, 1, 0);
+            zaxis = new THREE.Vector3(0, 0, 1);
+            direction = new THREE.Vector3(0, 0, 1);
+          // Apply the camera's quaternion onto the unit vector of one of the axes
+          // of our desired rotation plane (the z axis of the xz plane, in this case).
+          direction.applyQuaternion(camera.quaternion);
+          // Project the direction vector onto the y axis to get the y component
+          // of the direction.
+          ycomponent = yaxis.multiplyScalar(direction.dot(yaxis));
+          // Subtract the y component from the direction vector so that we are
+          // left with the x and z components.
+          direction.sub(ycomponent);
+          // Normalize the direction into a unit vector again.
+          direction.normalize();
+          // Set the pivot's quaternion to the rotation required to get from the z axis
+          // to the xz component of the camera's direction.
+          pivot.quaternion.setFromUnitVectors(zaxis, direction);
+          
+          pivot.position.copy(camera.position);
 
-        }
 
-    </script>
+          effect.render( scene, camera );
+
+      }
+
+  </script>
 </body>
 </html>

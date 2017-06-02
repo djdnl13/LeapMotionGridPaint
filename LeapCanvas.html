@@ -126,7 +126,7 @@
                                 anyFingerUp = true;
                             }
                             if (finger.type == 1 && bone.type == 3 && bone.direction()[1] > -10.0 && hand.arm.center()[2]<150)
-                            {                                
+                            {
                                 indexPointing = true;
                                 if(hand.type == "right")
                                     mesh.material.color.setHex(colors[indexColor]);
@@ -222,7 +222,7 @@
                     var boneMeshes = [];
                     var jointMeshes = [];
 
-                    /*finger.bones.forEach(function(bone)
+                    finger.bones.forEach(function(bone)
                     {
                         // create joints
 
@@ -236,7 +236,7 @@
                         scene.add(boneMesh);
                         boneMeshes.push(boneMesh);
 
-                    });*/
+                    });
 
                     for (var i = 0; i < finger.bones.length + 1; i++)
                     {

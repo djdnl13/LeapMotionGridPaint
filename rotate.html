@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="description" content="SO 34447119">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>JS Bin</title>
+  <script src="http://cdn.rawgit.com/borismus/webvr-boilerplate/0.2.2/bower_components/threejs/build/three.js"></script>
+  <script src="http://cdn.rawgit.com/borismus/webvr-boilerplate/0.2.2/bower_components/threejs/examples/js/controls/VRControls.js"></script>
+  <script src="http://cdn.rawgit.com/borismus/webvr-boilerplate/0.2.2/bower_components/threejs/examples/js/effects/VREffect.js"></script>
+  <script src="http://cdn.rawgit.com/borismus/webvr-boilerplate/0.2.2/bower_components/webvr-polyfill/build/webvr-polyfill.js"></script>
+  <script src="http://cdn.rawgit.com/borismus/webvr-boilerplate/0.2.2/build/webvr-manager.js"></script>
+
+
+</head>
+<body>
+
+
+<script type="text/javascript">
+    var renderer = new THREE.WebGLRenderer({antialias: true});
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+var controls = new THREE.VRControls(camera);
+var effect = new THREE.VREffect(renderer);
+effect.setSize(window.innerWidth, window.innerHeight);
+var manager = new WebVRManager(renderer, effect, {hideButton: false});
+
+// Add a repeating grid as a skybox.
+var boxWidth = 5;
+THREE.ImageUtils.crossOrigin = '';
+var texture = THREE.ImageUtils.loadTexture(
+  'http://cdn.rawgit.com/borismus/webvr-boilerplate/0.3.3/img/box.png'
+);
+texture.wrapS = THREE.RepeatWrapping;
+texture.wrapT = THREE.RepeatWrapping;
+texture.repeat.set(boxWidth, boxWidth);
+var skybox = new THREE.Mesh(
+  new THREE.BoxGeometry(boxWidth, boxWidth, boxWidth),
+  new THREE.MeshBasicMaterial({
+    map: texture,
+    color: 0x01BE00,
+    side: THREE.BackSide
+  })
+);
+scene.add(skybox);
+
+var floorPos = -1.5;
+var floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(100, 100, 2, 2),
+  new THREE.MeshBasicMaterial({color: 'white'})
+);
+floor.position.set(0, floorPos, 0);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+var thingDistance = -1;
+
+var box = new THREE.Mesh(
+  new THREE.BoxGeometry(0.5, 0.5, 0.5),
+  new THREE.MeshNormalMaterial()
+  );
+box.position.set(-0.5, floorPos, thingDistance);
+var boxPos = box.position.clone();
+scene.add(box);
+
+var ball = new THREE.Mesh(
+  new THREE.SphereGeometry(0.3),
+  new THREE.MeshNormalMaterial()
+  );
+ball.position.set(0.5, floorPos, thingDistance);
+var ballPos = ball.position.clone();
+scene.add(ball);
+
+var pivot = new THREE.Object3D();
+scene.add(pivot);
+
+var ballInFront = false;
+document.addEventListener('click', function () {
+  if (ballInFront) {
+    scene.add(ball);
+    ball.position.copy(ballPos);
+    
+    pivot.add(box);
+    box.position.set(0, 0, thingDistance);
+    ballInFront = false;
+  }
+  else {
+    scene.add(box);
+    box.position.copy(boxPos);
+    
+    pivot.add(ball);
+    ball.position.set(0, 0, thingDistance);
+    ballInFront = true;
+  }
+});
+
+
+var yaxis = new THREE.Vector3(0, 1, 0);
+var zaxis = new THREE.Vector3(0, 0, 1);
+function animate(timestamp) {
+  controls.update();
+  
+   direction = zaxis.clone();
+  // Apply the camera's quaternion onto the unit vector of one of the axes
+  // of our desired rotation plane (the z axis of the xz plane, in this case).
+  direction.applyQuaternion(camera.quaternion);
+  // Project the direction vector onto the y axis to get the y component
+  // of the direction.
+   ycomponent = yaxis.clone().multiplyScalar(direction.dot(yaxis));
+  // Subtract the y component from the direction vector so that we are
+  // left with the x and z components.
+  direction.sub(ycomponent);
+  // Normalize the direction into a unit vector again.
+  direction.normalize();
+  // Set the pivot's quaternion to the rotation required to get from the z axis
+  // to the xz component of the camera's direction.
+  pivot.quaternion.setFromUnitVectors(zaxis, direction);
+  
+  pivot.position.copy(camera.position);
+  
+  manager.render(scene, camera, timestamp);
+  requestAnimationFrame(animate);
+}
+animate();
+
+function onKey(event) {
+  if (event.keyCode == 90) { // z
+    controls.resetSensor();
+  }
+}
+window.addEventListener('keydown', onKey, true);
+    
+  </script>
+</body> 
+</html>
